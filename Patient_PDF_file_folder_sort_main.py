@@ -9,6 +9,7 @@ import os
 import shutil
 import configparser
 import sys
+import time
 
 
 def word_search(words, text):
@@ -88,6 +89,9 @@ def enter_to_exit():
 
 if __name__=="__main__":
 
+    timeStarted = time.time()
+    folderFileMatchTries = 0
+
     # get details from config.ini file
     config = configparser.ConfigParser()
     try:
@@ -99,50 +103,63 @@ if __name__=="__main__":
     except:
         print("There was a problem accessing data from the config.ini file. Please check it has not been moved and restart the program.")
         enter_to_exit()
-
-
-    # iterate over folders in patient folder directory
-    for foldername in os.listdir(patient_folder_dir):
+        
     
-        # determine if item in patient folder directory is a directory
-        if os.path.isdir(os.path.join(patient_folder_dir, foldername)):         
-            
-            # get new list of patient file paths updated for every for loop iteration
-            file_paths_list = get_doc_filepaths(directory_path=patient_file_folder, file_ext='.pdf')
-            
-            # get list of file path-text pairs
-            fileTextPairs = []
-            for filePath in file_paths_list:
-                fileText = get_text(filePath)
-                fileTextPairs.append([filePath, fileText])
-           
-            # get split folder name
-            splitFolderName = foldername.split()
-             
+    # check if there are PDF files to be moved.
+    file_paths_list = get_doc_filepaths(directory_path=patient_file_folder, file_ext='.pdf')
+    if len(file_paths_list) == 0:
+        print("No PDF files to be moved where found.")
 
-            # match split folder name to list of file path-text pairs and move files
-            for fileTextPair in fileTextPairs:
-                
-                if word_search(words=splitFolderName, text=fileTextPair[1]):
+    else:
+        # get list of file path-text pairs
+        fileTextPairs = []
+        for filePath in file_paths_list:
+            fileText = get_text(filePath)
+            fileTextPairs.append([filePath, fileText])
+
+
+        # iterate over folders in patient folder directory
+        for foldername in os.listdir(patient_folder_dir):
+            
+            # check if there are files to be moved. If none exist then break out of folder loop
+            if len(fileTextPairs) == 0:
+                break
+                            
+            else:
+                # determine if item in patient folder directory is a directory
+                if os.path.isdir(os.path.join(patient_folder_dir, foldername)):
+
+                    # count number of patient folder match attempts
+                    folderFileMatchTries += 1       
+                                            
+                    # get split folder name
+                    splitFolderName = foldername.split()
                     
-                    # specify destination folder for matching file
-                    patientFolder = os.path.join(patient_folder_dir, foldername)
-                    move_file(file_path=fileTextPair[0], destination_path=patientFolder)
+                    
+                    # match split folder name to list of file path-text pairs and move files
+                    for fileTextPair in fileTextPairs:
+                        
+                        if word_search(words=splitFolderName, text=fileTextPair[1]):
+                            
+                            # specify destination folder for matching file
+                            patientFolder = os.path.join(patient_folder_dir, foldername)
+                            move_file(file_path=fileTextPair[0], destination_path=patientFolder)
+                            fileTextPairs.remove(fileTextPair)
 
-                else:
-                    continue
+                        else:
+                            continue
     
     # print list of pdf files still remaining in patient file directory
-    remainingPDFs = get_doc_filepaths(directory_path=patient_file_folder, file_ext='.pdf')
-
-    if len(remainingPDFs) > 0:
+    if len(fileTextPairs) > 0:
         print("\nThe following PDF files could not be moved to a folder: \n")
-        for item in remainingPDFs:
-                print(os.path.basename(item))
+        for item in fileTextPairs:
+                print(os.path.basename(item[0]))
     
-    else:
-        print("No more files to be moved.")
-                
+    
+
+    timeTaken = round(time.time() - timeStarted, 2)  
+    print("\nProgram run time: " + str(timeTaken) + " seconds.")
+    print("Number of folder-document match attempts: " + str(folderFileMatchTries))    
     print("\nProgram complete.")
     # enable perusal of messages by having user action end program
     enter_to_exit()
