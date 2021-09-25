@@ -117,7 +117,6 @@ if __name__=="__main__":
             fileText = get_text(filePath)
             fileTextPairs.append([filePath, fileText])
 
-
         # iterate over folders in patient folder directory
         for foldername in os.listdir(patient_folder_dir):
             
